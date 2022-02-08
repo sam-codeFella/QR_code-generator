@@ -1,18 +1,45 @@
 from flask import Flask, request, render_template
-import requests
 import os
 import asyncio
+from aiohttp import ClientSession, ClientResponseError
 
 RESULT_IMAGES = os.path.join('static', 'results')
 
 qr_app = Flask(__name__)
 # qr_app.config['RESULT_IMAGES'] = RESULT_IMAGES
 
-async def getImage(url):
+
+async def fetch_url_data(session, url):
+    try:
+        async with session.get(url, timeout=60, ssl=False) as response:
+            resp = await response.read()
+            await asyncio.sleep(1)
+            file = open(RESULT_IMAGES + "/sample_image.png", "wb")
+            file.write(response.content)
+            file.close()
+            return resp()
+    except Exception as e:
+        print(e)
+    return
+
+'''
+async def getImage(input):
     response = requests.get("https://api.qrserver.com/v1/create-qr-code/?&data=" + input)
     file = open(RESULT_IMAGES + "/sample_image.png", "wb")
     file.write(response.content)
     file.close()
+'''
+
+
+async def getFile(input):
+    filename = RESULT_IMAGES + '/sample_image.png'
+    async with ClientSession() as session:
+        task = asyncio.ensure_future(fetch_url_data(session, 'https://api.qrserver.com/v1/create-qr-code/?&data=' + input))
+        print("yo")
+        responses = await asyncio.gather(task)
+        print(responses)
+    return filename
+
 
 @qr_app.route('/', methods=['GET'])
 def welcome():
@@ -21,14 +48,9 @@ def welcome():
 
 
 @qr_app.route('/qr', methods=['POST'])
-def returnqr():
+async def returnqr():
     input = request.form['input_text']
-    response = requests.get("https://api.qrserver.com/v1/create-qr-code/?&data=" + input)
-    # now this qr_image variable needs to be an actual image.
-    file = open(RESULT_IMAGES + "/sample_image.png", "wb")
-    file.write(response.content)
-    file.close()
-    filename = RESULT_IMAGES + '/sample_image.png'
+    filename = await getFile(input)
     return render_template("code.html", qr_image=filename)# okay so this works.
 
 
