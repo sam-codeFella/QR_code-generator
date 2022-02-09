@@ -12,17 +12,8 @@ async def getImage(input):
     return response
 
 
-async def syncGetImage(input):
-    response = requests.get("https://api.qrserver.com/v1/create-qr-code/?&data=" + input)
-    file = open(RESULT_IMAGES + "/sample_image.png", "wb")
-    file.write(response.content)
-    file.close()
-    filename = RESULT_IMAGES + '/sample_image.png'
-    return filename
-
-
-async def getImage2(input):
-    task = asyncio.ensure_future(getImage(input))# this is the async call.  One can continue execution from here.
+async def getResponse(input):
+    task = asyncio.ensure_future(getImage(input))
     response = await asyncio.gather(task)
     return response[0]
 
@@ -35,18 +26,19 @@ def welcome():
 
 @app.route('/generate', methods=['GET'])
 def returnForm():
+    print("Showing the generate QR page....")
     return render_template("input.html")
 
 
 @app.route('/qrcode', methods=['POST'])
 async def returnQr():
     input = request.form['input_text']
-    response = await getImage2(input)
+    response = await getResponse(input)
     file = open(RESULT_IMAGES + "/sample_image.png", "wb")
     file.write(response.content)
     file.close()
     filename = RESULT_IMAGES + '/sample_image.png'
-    return render_template("code.html", qr_image=filename)# okay so this works.
+    return render_template("code.html", qr_image=filename)
 
 
 if __name__ == '__main__':
